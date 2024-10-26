@@ -1,4 +1,4 @@
-# topics
+# super basic topics
 from sentence_transformers import SentenceTransformer
 from sklearn.cluster import AgglomerativeClustering
 from keybert import KeyBERT
