@@ -1,1 +1,87 @@
 # topics
+from sentence_transformers import SentenceTransformer
+from sklearn.cluster import AgglomerativeClustering
+from keybert import KeyBERT
+import plotly.graph_objects as go
+import matplotlib.colors as mcolors
+
+
+kw_model = KeyBERT(model='all-MiniLM-L6-v2')
+model = SentenceTransformer('all-MiniLM-L6-v2')
+
+phrases = [...]
+
+embeddings = model.encode(phrases)
+
+clustering = AgglomerativeClustering(distance_threshold=1.8, n_clusters=None)
+clustering.fit(embeddings)
+
+clustered_phrases = {i: [] for i in range(max(clustering.labels_) + 1)}
+for idx, label in enumerate(clustering.labels_):
+    clustered_phrases[label].append(phrases[idx])
+
+clustered_keywords = {}
+
+for cluster_id, cluster_phrases in clustered_phrases.items():
+    text = ", ".join(cluster_phrases)
+    keywords = kw_model.extract_keywords(text, keyphrase_ngram_range=(1, 2), stop_words='english', top_n=10, highlight=False)
+    overarching_topic = ", ".join([keyword[0] for keyword in keywords])
+    clustered_keywords[cluster_id] = overarching_topic
+
+...
+
+cluster_topics = {...}
+
+phrases_for_df = [
+    (phrase, cluster_topics[i]) 
+    for i, phrases in clustered_phrases.items() 
+    for phrase in phrases
+]
+
+df = pd.DataFrame(phrases_for_df, columns=['phrase', 'topic'])
+
+nodes = list(pd.concat([df["phrase"], df["topic"]]).unique())
+
+node_indices = {node: i for i, node in enumerate(nodes)}
+
+unique_topics = df["topic"].unique()
+num_topics = len(unique_topics)
+
+color_map = list(mcolors.TABLEAU_COLORS.values())
+if num_topics > len(color_map):
+    color_map = mcolors.CSS4_COLORS.values()
+topic_colors = {topic: color_map[i % len(color_map)] for i, topic in enumerate(unique_topics)}
+
+node_colors = []
+for node in nodes:
+    topic = df[df["phrase"] == node]["topic"].values[0] if node in df["phrase"].values else node
+    node_colors.append(topic_colors[topic])
+
+sources = [node_indices[phrase] for phrase in df["phrase"]]
+targets = [node_indices[topic] for topic in df["topic"]]
+values = [1] * len(df)
+
+fig = go.Figure(go.Sankey(
+    node=dict(
+        pad=15,
+        thickness=20,
+        line=dict(color="white", width=1),
+        label=nodes,
+        color=node_colors
+    ),
+    link=dict(
+        source=sources,
+        target=targets,
+        value=values,
+        color="rgba(0, 0, 0, 0.1)"
+    )
+))
+
+fig.update_layout(
+    title_text="...",
+    font_size=10,
+    width=600,
+    height=600
+)
+
+fig.show()
