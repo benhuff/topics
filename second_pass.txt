@@ -1,1 +1,573 @@
-# umap + hdbscan for clustering
+# umap + hdbscan or umap + agglomeration for clustering
+import umap
+import hdbscan
+import pandas as pd
+
+from sentence_transformers import SentenceTransformer
+from sklearn.cluster import AgglomerativeClustering
+
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.offline import plot
+import matplotlib.colors as mcolors
+
+
+model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
+
+phrases = [
+    # Environmental Sustainability
+    "Climate change impact", "Renewable energy sources", "Carbon footprint reduction", 
+    "Sustainable agriculture practices", "Biodiversity protection", "Ocean pollution solutions", 
+    "Urban green spaces", "Air quality improvements", "Eco-friendly packaging", 
+    "Wildlife conservation strategies", "Deforestation prevention", "Plastic waste reduction", 
+    "Green building materials", "Sustainable tourism", "Water conservation methods", 
+    "Recycling programs effectiveness", "Energy-efficient technology", "Forest restoration projects", 
+    "Zero-waste lifestyle", "Eco-conscious consumerism", "Renewable energy policies", 
+    "Environmental advocacy movements", "Sustainable farming innovations", "Renewable transport initiatives", 
+    "Climate resilience efforts", "Biodiversity and ecosystems", "Pollution control measures", 
+    "Renewable energy adoption", "Urban sustainability solutions", "Composting for waste management", 
+    "Water pollution prevention", "Soil conservation techniques", "Marine biodiversity efforts", 
+    "Sustainable fisheries management", "Nature reserve preservation", "Alternative energy investments", 
+    "Carbon offset programs", "Green tech developments", "Waste management advancements",
+    
+    # Technology Advancements
+    "Artificial intelligence applications", "Machine learning innovations", "Blockchain technology uses", 
+    "Cybersecurity improvements", "Internet of Things (IoT) devices", "5G network expansion", 
+    "Smart home technology", "Augmented reality in retail", "Virtual reality experiences", 
+    "Autonomous vehicles development", "Quantum computing research", "Wearable health tech", 
+    "Data privacy regulations", "Digital transformation", "Biometric authentication systems", 
+    "E-commerce trends", "Cloud computing solutions", "Remote work technology", 
+    "Robotic process automation", "3D printing advancements", "Fintech innovations", 
+    "Mobile app development", "Drone delivery systems", "Smart city infrastructure", 
+    "Predictive analytics uses", "Voice recognition software", "Social media algorithms", 
+    "Sustainable tech solutions", "Electric vehicle adoption", "Battery technology improvements", 
+    "Digital currency evolution", "E-learning platforms", "Telemedicine growth", 
+    "Contactless payment systems", "Data visualization tools", "Human-computer interaction research", 
+    "Wearable tech trends", "Smart manufacturing processes", "Green technology applications",
+    
+    # Healthcare Innovations
+    "Telehealth adoption", "Mental health awareness", "Vaccine development", 
+    "Healthcare data privacy", "Wearable health monitors", "Chronic disease management", 
+    "AI in diagnostics", "Pharmaceutical innovations", "Health equity initiatives", 
+    "Genetic testing advancements", "Health information technology", "Preventative care practices", 
+    "Digital health records", "Remote patient monitoring", "Telemedicine services", 
+    "Mental wellness programs", "COVID-19 vaccine rollout", "Healthcare accessibility", 
+    "Medical device innovations", "Personalized medicine", "Nutritional science advances", 
+    "Digital therapeutics", "Health insurance reforms", "Wearable fitness devices", 
+    "Robotics in surgery", "Aging population healthcare", "Substance abuse treatment", 
+    "Physical therapy innovations", "Telehealth regulations", "Mobile health apps", 
+    "Healthcare workforce challenges", "Digital health trends", "Electronic health records", 
+    "Pandemic response strategies", "Nutrition and diet trends", "Biotech investments", 
+    "Oncology treatment research", "Health data analytics", "Therapeutic AI applications",
+    
+    # Education Trends
+    "E-learning platforms", "Remote learning benefits", "STEM education programs", 
+    "Digital literacy skills", "Coding for kids", "Language learning apps", 
+    "Online degree programs", "Classroom technology integration", "Diversity in education", 
+    "Soft skills training", "Project-based learning", "Special education resources", 
+    "STEM careers for women", "Virtual classrooms", "Higher education costs", 
+    "Vocational training programs", "Personalized learning experiences", "Gamification in education", 
+    "Inclusive teaching practices", "Student mental health support", "Blended learning models", 
+    "University partnerships", "Adult education programs", "School safety measures", 
+    "Global education access", "AI in education", "Teacher retention efforts", 
+    "Educational funding challenges", "Environmental education programs", "Student data privacy", 
+    "Early childhood education", "Online tutoring services", "Curriculum development trends", 
+    "Financial literacy for students", "School nutrition programs", "Teacher professional development", 
+    "Technology in K-12", "Education policy reforms", "STEM outreach initiatives",
+    
+    # Global Economy
+    "Cryptocurrency market trends", "Global trade policies", "Labor market shifts", 
+    "Economic recovery post-pandemic", "Supply chain management", "Remote work economy", 
+    "Global inflation concerns", "Stock market volatility", "Green finance growth", 
+    "Real estate market trends", "Digital currency impact", "International trade relations", 
+    "Corporate tax reform", "Financial market regulations", "Consumer spending shifts", 
+    "Investment in renewables", "Unemployment rate trends", "Venture capital growth", 
+    "Sustainable investing", "Tax policy impacts", "Global economic growth", 
+    "International labor migration", "Small business support", "Monetary policy changes", 
+    "Banking sector transformation", "Emerging markets investments", "Economic inequality solutions", 
+    "Consumer debt issues", "Pension system reforms", "Green bond issuance", 
+    "Foreign direct investment", "Corporate social responsibility", "Supply chain innovation", 
+    "Global GDP forecasts", "Impact of tariffs", "Debt relief programs", 
+    "Inflation rate trends", "Digital economy growth", "Trade agreement impacts", 
+    "Public-private partnerships", "Renewable energy investments"
+]
+
+embeddings = model.encode(phrases)
+
+umap_model = umap.UMAP(n_neighbors=15, n_components=2, metric='cosine', random_state=42)
+umap_embeddings = umap_model.fit_transform(embeddings)
+
+agglomerative_clustering = AgglomerativeClustering(distance_threshold=3, n_clusters=None)
+agglomerative_labels = agglomerative_clustering.fit_predict(umap_embeddings)
+
+agglomerative_clustered_phrases = {i: [] for i in range(max(agglomerative_clustering.labels_) + 1)}
+for idx, label in enumerate(agglomerative_clustering.labels_):
+    agglomerative_clustered_phrases[label].append(phrases[idx])
+
+for cluster, phrases_ in agglomerative_clustered_phrases.items():
+    print(f"{cluster}: {phrases_}")
+
+agglomerative_cluster_topics = {
+    0: "Digital Health & Privacy",
+    1: "Global Economy & Climate Resilience",
+    2: "Tech Innovation & AI Applications",
+    3: "IoT, Remote Work, & Smart Infrastructure",
+    4: "Mental Health & Community Wellness",
+    5: "Diverse Education & Workforce Development",
+    6: "Sustainability & Waste Reduction",
+    7: "Renewable Energy & Green Investment",
+    8: "E-Learning & Virtual Education",
+    9: "Financial Reforms & Economic Equity",
+    10: "Cybersecurity & Health Science",
+    11: "Environmental Conservation",
+    12: "Biotech & Emerging Market Investment"
+}
+
+umap_df = pd.DataFrame(umap_embeddings, columns=['UMAP1', 'UMAP2'])
+umap_df['Cluster'] = agglomerative_labels
+umap_df['Phrase'] = phrases
+umap_df['Topic'] = umap_df['Cluster'].map(agglomerative_cluster_topics)
+
+cluster_centers = umap_df.groupby('Topic')[['UMAP1', 'UMAP2']].mean().reset_index()
+
+fig = px.scatter(umap_df, x='UMAP1', y='UMAP2', color=umap_df['Topic'].astype(str),
+                 hover_name='Phrase', title='UMAP + Agglomerative Clusters 2D',
+                 color_discrete_sequence=px.colors.qualitative.Bold)
+
+fig.update_traces(marker=dict(size=20, opacity=0.8, line=dict(width=4, color='white')))
+fig.update_layout(width=3200, height=1600)
+
+for _, row in cluster_centers.iterrows():
+    fig.add_annotation(
+        x=row['UMAP1'],
+        y=row['UMAP2'],
+        text=row['Topic'],
+        showarrow=False,
+        font=dict(size=12, color="rgba(0, 0, 0, 0.9)", family="Arial Black"),
+        bgcolor=None,
+        opacity=0.75
+    )
+
+filename = 'umap_agglomerative_clusters.html'
+plot(fig, filename=filename, auto_open=False)
+
+phrases_for_agglomerative_df = [
+    (phrase, agglomerative_cluster_topics[i]) 
+    for i, phrases in agglomerative_clustered_phrases.items() 
+    for phrase in phrases
+]
+
+agglomerative_df = pd.DataFrame(phrases_for_agglomerative_df, columns=['phrase', 'topic'])
+agglomerative_df.sample(10).head()
+
+nodes = list(pd.concat([agglomerative_df["phrase"], agglomerative_df["topic"]]).unique())
+
+node_indices = {node: i for i, node in enumerate(nodes)}
+
+unique_topics = agglomerative_df["topic"].unique()
+num_topics = len(unique_topics)
+
+color_map = list(mcolors.TABLEAU_COLORS.values())
+if num_topics > len(color_map):
+    color_map = list(mcolors.CSS4_COLORS.values())
+topic_colors = {topic: color_map[i % len(color_map)] for i, topic in enumerate(unique_topics)}
+
+node_colors = []
+for node in nodes:
+    topic = agglomerative_df[agglomerative_df["phrase"] == node]["topic"].values[0] if node in agglomerative_df["phrase"].values else node
+    node_colors.append(topic_colors[topic])
+
+sources = [node_indices[phrase] for phrase in agglomerative_df["phrase"]]
+targets = [node_indices[topic] for topic in agglomerative_df["topic"]]
+values = [1] * len(agglomerative_df)
+
+fig = go.Figure(go.Sankey(
+    node=dict(
+        pad=15,
+        thickness=20,
+        line=dict(color="white", width=1),
+        label=nodes,
+        color=node_colors
+    ),
+    link=dict(
+        source=sources,
+        target=targets,
+        value=values,
+        color="rgba(0, 0, 0, 0.1)"
+    )
+))
+
+fig.update_layout(
+    title_text="Agglomerative Cluster 2D Topics",
+    font_size=14,
+    width=1600,
+    height=3000
+)
+
+filename = 'umap_agglomerative_cluster_topics.html'
+plot(fig, filename=filename, auto_open=False)
+
+umap_model_3d = umap.UMAP(n_neighbors=15, n_components=3, metric='cosine', random_state=42)
+umap_embeddings_3d = umap_model_3d.fit_transform(embeddings)
+
+agglomerative_clustering_3d = AgglomerativeClustering(distance_threshold=3, n_clusters=None)
+agglomerative_labels_3d = agglomerative_clustering_3d.fit_predict(umap_embeddings_3d)
+
+agglomerative_clustered_phrases_3d = {i: [] for i in range(max(agglomerative_clustering_3d.labels_) + 1)}
+for idx, label in enumerate(agglomerative_clustering_3d.labels_):
+    agglomerative_clustered_phrases_3d[label].append(phrases[idx])
+
+for cluster, phrases_ in agglomerative_clustered_phrases_3d.items():
+    print(f"{cluster}: {phrases_}")
+
+agglomerative_cluster_topics_3d = {
+    0: "Digital Learning & EdTech",
+    1: "Renewable Energy & Green Investments",
+    2: "Telehealth & Wearable Tech",
+    3: "AI, Automation & Emerging Tech",
+    4: "Economic Trends & Digital Markets",
+    5: "Sustainable Living & Waste Reduction",
+    6: "Education Access & Policy",
+    7: "Mental Health & Healthcare Access",
+    8: "Health Security & Nutrition",
+    9: "Data Privacy & Health IT",
+    10: "Financial Literacy & Economic Equity",
+    11: "Biodiversity & Conservation",
+    12: "Climate & Global Trade Policies"
+}
+
+umap_df_3d = pd.DataFrame(umap_embeddings_3d, columns=['UMAP1', 'UMAP2', 'UMAP3'])
+umap_df_3d['Cluster'] = agglomerative_labels_3d
+umap_df_3d['Phrase'] = phrases
+umap_df_3d['Topic'] = umap_df_3d['Cluster'].map(agglomerative_cluster_topics_3d)
+
+cluster_centers = umap_df_3d.groupby('Topic')[['UMAP1', 'UMAP2', 'UMAP3']].mean().reset_index()
+
+fig = px.scatter_3d(umap_df_3d, x='UMAP1', y='UMAP2', z='UMAP3', color=umap_df_3d['Topic'].astype(str),
+                    hover_name='Phrase', title='3D UMAP + Agglomerative Clusters',
+                    color_discrete_sequence=px.colors.qualitative.Bold)
+
+fig.update_traces(marker=dict(size=5, opacity=0.8, line=dict(width=0.5, color='black')))
+fig.update_layout(width=3200, height=1600)
+
+for _, row in cluster_centers.iterrows():
+    fig.add_trace(
+        go.Scatter3d(
+            x=[row['UMAP1']],
+            y=[row['UMAP2']],
+            z=[row['UMAP3']],
+            text=[row['Topic']],
+            mode='text',
+            textfont=dict(size=12, color="rgba(0, 0, 0, 0.7)", family="Arial Black"),
+            showlegend=False
+        )
+    )
+
+filename = 'umap_agglomerative_clusters_3d.html'
+plot(fig, filename=filename, auto_open=False)
+
+phrases_for_agglomerative_df_3d = [
+    (phrase, agglomerative_cluster_topics_3d[i]) 
+    for i, phrases in agglomerative_clustered_phrases_3d.items() 
+    for phrase in phrases
+]
+
+agglomerative_df_3d = pd.DataFrame(phrases_for_agglomerative_df_3d, columns=['phrase', 'topic'])
+agglomerative_df_3d.sample(10).head()
+
+nodes = list(pd.concat([agglomerative_df_3d["phrase"], agglomerative_df_3d["topic"]]).unique())
+
+node_indices = {node: i for i, node in enumerate(nodes)}
+
+unique_topics = agglomerative_df_3d["topic"].unique()
+num_topics = len(unique_topics)
+
+color_map = list(mcolors.TABLEAU_COLORS.values())
+if num_topics > len(color_map):
+    color_map = list(mcolors.CSS4_COLORS.values())
+topic_colors = {topic: color_map[i % len(color_map)] for i, topic in enumerate(unique_topics)}
+
+node_colors = []
+for node in nodes:
+    topic = agglomerative_df_3d[agglomerative_df_3d["phrase"] == node]["topic"].values[0] if node in agglomerative_df_3d["phrase"].values else node
+    node_colors.append(topic_colors[topic])
+
+sources = [node_indices[phrase] for phrase in agglomerative_df_3d["phrase"]]
+targets = [node_indices[topic] for topic in agglomerative_df_3d["topic"]]
+values = [1] * len(agglomerative_df_3d)
+
+fig = go.Figure(go.Sankey(
+    node=dict(
+        pad=15,
+        thickness=20,
+        line=dict(color="white", width=1),
+        label=nodes,
+        color=node_colors
+    ),
+    link=dict(
+        source=sources,
+        target=targets,
+        value=values,
+        color="rgba(0, 0, 0, 0.1)"
+    )
+))
+
+fig.update_layout(
+    title_text="Agglomerative Cluster Topics 3D",
+    font_size=14,
+    width=1600,
+    height=3000
+)
+
+filename = 'umap_agglomerative_cluster_topics_3d.html'
+plot(fig, filename=filename, auto_open=False)
+
+hdbscan_model = hdbscan.HDBSCAN(min_cluster_size=5, cluster_selection_epsilon=0.4, min_samples=1)
+hdbscan_labels = hdbscan_model.fit_predict(umap_embeddings)
+
+hdbscan_clustered_phrases = {i: [] for i in range(hdbscan_labels.max() + 1) if i != -1}
+hdbscan_clustered_phrases['noise'] = []
+
+for idx, label in enumerate(hdbscan_labels):
+    if label != -1:
+        hdbscan_clustered_phrases[label].append(phrases[idx])
+    else:
+        hdbscan_clustered_phrases['noise'].append(phrases[idx])
+
+for cluster, phrases_ in hdbscan_clustered_phrases.items():
+    print(f"{cluster}: {phrases_}")
+
+hdbscan_cluster_topics = {
+    0: "Renewable Energy & Green Tech",
+    1: "Environmental Sustainability & Conservation",
+    2: "Global Economy & Financial Trends",
+    3: "Virtual Learning & EdTech",
+    4: "STEM & Inclusive Education",
+    5: "Retail & Supply Chain Innovation",
+    6: "Remote Work & Telehealth",
+    7: "Healthcare Accessibility & Equity",
+    8: "Advanced Tech & Health Applications",
+    "noise": "Climate & Education Initiatives"
+}
+
+umap_df = pd.DataFrame(umap_embeddings, columns=['UMAP1', 'UMAP2'])
+umap_df['Cluster'] = hdbscan_labels
+umap_df['Phrase'] = phrases
+umap_df['Topic'] = umap_df['Cluster'].map(hdbscan_cluster_topics)
+
+cluster_centers = umap_df.groupby('Topic')[['UMAP1', 'UMAP2']].mean().reset_index()
+
+fig = px.scatter(umap_df, x='UMAP1', y='UMAP2', color=umap_df['Topic'].astype(str),
+                 hover_name='Phrase', title='UMAP + HDBSCAN Clusters',
+                 color_discrete_sequence=px.colors.cyclical.Phase)
+
+fig.update_traces(marker=dict(size=20, opacity=0.8, line=dict(width=4, color='white')))
+fig.update_layout(width=3200, height=1600)
+
+for _, row in cluster_centers.iterrows():
+    fig.add_annotation(
+        x=row['UMAP1'],
+        y=row['UMAP2'],
+        text=row['Topic'],
+        showarrow=False,
+        font=dict(size=12, color="rgba(0, 0, 0, 0.9)", family="Arial Black"),
+        bgcolor=None,
+        opacity=0.75
+    )
+
+filename = 'umap_hdbscan_clusters.html'
+plot(fig, filename=filename, auto_open=False)
+
+phrases_for_hdbscan_df = [
+    (phrase, hdbscan_cluster_topics[i]) 
+    for i, phrases in hdbscan_clustered_phrases.items() 
+    for phrase in phrases
+]
+
+hdbscan_df = pd.DataFrame(phrases_for_hdbscan_df, columns=['phrase', 'topic'])
+hdbscan_df.sample(10).head()
+
+nodes = list(pd.concat([hdbscan_df["phrase"], hdbscan_df["topic"]]).unique())
+
+node_indices = {node: i for i, node in enumerate(nodes)}
+
+unique_topics = hdbscan_df["topic"].unique()
+num_topics = len(unique_topics)
+
+color_map = list(mcolors.TABLEAU_COLORS.values())
+if num_topics > len(color_map):
+    color_map = list(mcolors.CSS4_COLORS.values())
+topic_colors = {topic: color_map[i % len(color_map)] for i, topic in enumerate(unique_topics)}
+
+node_colors = []
+for node in nodes:
+    topic = hdbscan_df[hdbscan_df["phrase"] == node]["topic"].values[0] if node in hdbscan_df["phrase"].values else node
+    node_colors.append(topic_colors[topic])
+
+sources = [node_indices[phrase] for phrase in hdbscan_df["phrase"]]
+targets = [node_indices[topic] for topic in hdbscan_df["topic"]]
+values = [1] * len(hdbscan_df)
+
+fig = go.Figure(go.Sankey(
+    node=dict(
+        pad=15,
+        thickness=20,
+        line=dict(color="white", width=1),
+        label=nodes,
+        color=node_colors
+    ),
+    link=dict(
+        source=sources,
+        target=targets,
+        value=values,
+        color="rgba(0, 0, 0, 0.1)"
+    )
+))
+
+fig.update_layout(
+    title_text="HDBSCAN Cluster Topics",
+    font_size=14,
+    width=1600,
+    height=3000
+)
+
+filename = 'umap_hdbscan_cluster_topics.html'
+plot(fig, filename=filename, auto_open=False)
+
+umap_model_3d = umap.UMAP(n_neighbors=15, n_components=3, metric='cosine', random_state=42)
+umap_embeddings_3d = umap_model_3d.fit_transform(embeddings)
+
+hdbscan_model_3d = hdbscan.HDBSCAN(min_cluster_size=4, cluster_selection_epsilon=0.5, min_samples=1)
+hdbscan_labels_3d = hdbscan_model_3d.fit_predict(umap_embeddings_3d)
+
+hdbscan_clustered_phrases_3d = {i: [] for i in range(hdbscan_labels_3d.max() + 1) if i != -1}
+hdbscan_clustered_phrases_3d['noise'] = []
+
+for idx, label in enumerate(hdbscan_labels_3d):
+    if label != -1:
+        hdbscan_clustered_phrases_3d[label].append(phrases[idx])
+    else:
+        hdbscan_clustered_phrases_3d['noise'].append(phrases[idx])
+
+for cluster, phrases_ in hdbscan_clustered_phrases_3d.items():
+    print(f"{cluster}: {phrases_}")
+
+hdbscan_cluster_topics_3d = {
+    0: "Modern Education & E-Learning",
+    1: "Renewable Energy & Sustainable Investments",
+    2: "Environmental Conservation & Sustainability",
+    3: "Tech Innovations in User Interaction",
+    4: "Emerging Technologies & Digital Health",
+    5: "Health Security & Pandemic Preparedness",
+    6: "Global Economy & Market Dynamics",
+    "noise": "Miscellaneous Policy & Digital Impact"
+}
+
+umap_df_3d = pd.DataFrame(umap_embeddings_3d, columns=['UMAP1', 'UMAP2', 'UMAP3'])
+umap_df_3d['Cluster'] = hdbscan_labels_3d
+umap_df_3d['Phrase'] = phrases
+umap_df_3d['Topic'] = umap_df_3d['Cluster'].map(hdbscan_cluster_topics_3d)
+
+cluster_centers = umap_df_3d.groupby('Topic')[['UMAP1', 'UMAP2', 'UMAP3']].mean().reset_index()
+
+fig = px.scatter_3d(umap_df_3d, x='UMAP1', y='UMAP2', z='UMAP3', color=umap_df_3d['Topic'].astype(str),
+                    hover_name='Phrase', title='3D UMAP + HDBSCAN Clusters',
+                    color_discrete_sequence=px.colors.cyclical.Phase)
+
+fig.update_traces(marker=dict(size=5, opacity=0.8, line=dict(width=4, color='black')))
+fig.update_layout(width=3200, height=1600)
+
+for _, row in cluster_centers.iterrows():
+    fig.add_trace(
+        go.Scatter3d(
+            x=[row['UMAP1']],
+            y=[row['UMAP2']],
+            z=[row['UMAP3']],
+            text=[row['Topic']],
+            mode='text',
+            textfont=dict(size=12, color="rgba(0, 0, 0, 0.7)", family="Arial Black"),
+            showlegend=False
+        )
+    )
+
+filename = 'umap_hdbscan_clusters_3d.html'
+plot(fig, filename=filename, auto_open=False)
+
+phrases_for_hdbscan_df_3d = [
+    (phrase, hdbscan_cluster_topics_3d[i]) 
+    for i, phrases in hdbscan_clustered_phrases_3d.items() 
+    for phrase in phrases
+]
+
+hdbscan_df_3d = pd.DataFrame(phrases_for_hdbscan_df_3d, columns=['phrase', 'topic'])
+hdbscan_df_3d.sample(10).head()
+
+nodes = list(pd.concat([hdbscan_df_3d["phrase"], hdbscan_df_3d["topic"]]).unique())
+
+node_indices = {node: i for i, node in enumerate(nodes)}
+
+unique_topics = hdbscan_df_3d["topic"].unique()
+num_topics = len(unique_topics)
+
+color_map = list(mcolors.TABLEAU_COLORS.values())
+if num_topics > len(color_map):
+    color_map = list(mcolors.CSS4_COLORS.values())
+topic_colors = {topic: color_map[i % len(color_map)] for i, topic in enumerate(unique_topics)}
+
+node_colors = []
+for node in nodes:
+    topic = hdbscan_df_3d[hdbscan_df_3d["phrase"] == node]["topic"].values[0] if node in hdbscan_df_3d["phrase"].values else node
+    node_colors.append(topic_colors[topic])
+
+sources = [node_indices[phrase] for phrase in hdbscan_df_3d["phrase"]]
+targets = [node_indices[topic] for topic in hdbscan_df_3d["topic"]]
+values = [1] * len(hdbscan_df_3d)
+
+fig = go.Figure(go.Sankey(
+    node=dict(
+        pad=15,
+        thickness=20,
+        line=dict(color="white", width=1),
+        label=nodes,
+        color=node_colors
+    ),
+    link=dict(
+        source=sources,
+        target=targets,
+        value=values,
+        color="rgba(0, 0, 0, 0.1)"
+    )
+))
+
+fig.update_layout(
+    title_text="3D HDBSCAN Cluster Topics",
+    font_size=14,
+    width=1600,
+    height=3000
+)
+
+filename = 'hdbscan_cluster_topics_3d.html'
+plot(fig, filename=filename, auto_open=False)
+
+---------------------------------------------
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+for cluster, phrases_ in agglomerative_clustered_phrases.items():
+    document = ', '.join(phrases_)
+    documents = [document]
+
+    tfidf = TfidfVectorizer(stop_words='english', ngram_range=(2, 4))
+
+    tfidf_matrix = tfidf.fit_transform(documents)
+
+    feature_names = tfidf.get_feature_names_out()
+
+    tfidf_scores = tfidf_matrix.toarray().flatten()
+    word_scores = dict(zip(feature_names, tfidf_scores))
+
+    keywords_df = pd.DataFrame(list(word_scores.items()), columns=["Keyword", "Score"])
+    keywords_df = keywords_df.sort_values(by="Score", ascending=False)
+
+    top_keywords = keywords_df.head(10)['Keyword'].tolist()
+    print(f'{cluster}: {top_keywords}')
