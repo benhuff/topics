@@ -133,7 +133,7 @@ cluster_centers = umap_df.groupby('Topic')[['UMAP1', 'UMAP2']].mean().reset_inde
 
 fig = px.scatter(umap_df, x='UMAP1', y='UMAP2', color=umap_df['Topic'].astype(str),
                  hover_name='Phrase', title='UMAP + Agglomerative Clusters 2D',
-                 color_discrete_sequence=px.colors.qualitative.Bold)
+                 color_discrete_sequence=px.colors.qualitative.Dark24)
 
 fig.update_traces(marker=dict(size=20, opacity=0.8, line=dict(width=4, color='white')))
 fig.update_layout(width=3200, height=1600)
@@ -246,7 +246,7 @@ cluster_centers = umap_df_3d.groupby('Topic')[['UMAP1', 'UMAP2', 'UMAP3']].mean(
 
 fig = px.scatter_3d(umap_df_3d, x='UMAP1', y='UMAP2', z='UMAP3', color=umap_df_3d['Topic'].astype(str),
                     hover_name='Phrase', title='3D UMAP + Agglomerative Clusters',
-                    color_discrete_sequence=px.colors.qualitative.Bold)
+                    color_discrete_sequence=px.colors.qualitative.Dark24)
 
 fig.update_traces(marker=dict(size=5, opacity=0.8, line=dict(width=0.5, color='black')))
 fig.update_layout(width=3200, height=1600)
@@ -360,7 +360,7 @@ cluster_centers = umap_df.groupby('Topic')[['UMAP1', 'UMAP2']].mean().reset_inde
 
 fig = px.scatter(umap_df, x='UMAP1', y='UMAP2', color=umap_df['Topic'].astype(str),
                  hover_name='Phrase', title='UMAP + HDBSCAN Clusters',
-                 color_discrete_sequence=px.colors.cyclical.Phase)
+                 color_discrete_sequence=px.colors.qualitative.Dark24)
 
 fig.update_traces(marker=dict(size=20, opacity=0.8, line=dict(width=4, color='white')))
 fig.update_layout(width=3200, height=1600)
@@ -473,7 +473,7 @@ cluster_centers = umap_df_3d.groupby('Topic')[['UMAP1', 'UMAP2', 'UMAP3']].mean(
 
 fig = px.scatter_3d(umap_df_3d, x='UMAP1', y='UMAP2', z='UMAP3', color=umap_df_3d['Topic'].astype(str),
                     hover_name='Phrase', title='3D UMAP + HDBSCAN Clusters',
-                    color_discrete_sequence=px.colors.cyclical.Phase)
+                    color_discrete_sequence=px.colors.qualitative.Dark24)
 
 fig.update_traces(marker=dict(size=5, opacity=0.8, line=dict(width=4, color='black')))
 fig.update_layout(width=3200, height=1600)
