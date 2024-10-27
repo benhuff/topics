@@ -1,4 +1,5 @@
 # umap + hdbscan or umap + agglomeration for clustering
+# taken in part from https://engineering.atspotify.com/2023/12/recursive-embedding-and-clustering/
 import umap
 import hdbscan
 import pandas as pd
