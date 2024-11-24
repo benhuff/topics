@@ -1,0 +1,50 @@
+import re
+import json
+from json_repair import repair_json
+
+class JsonFixer:
+    '''Making `repair_json` just a bit more reliable... in probably a very messy way.'''
+    def __init__(self):
+        pass
+
+    def fix_json(self, malformed_string):
+        try:
+            broken = malformed_string.replace('\\', '')
+            split_lines = [line.strip().lower() for line in broken.split('\n') if line.strip()]
+            added_commas = [self._add_comma(line) for line in split_lines]
+            preprocessed = '\n'.join(added_commas)
+            repaired = repair_json(preprocessed)
+            return json.loads(repaired)
+        except Exception as e:
+            return str(e)
+
+    def _fix_list_string(self, s):
+        match = re.search(r'\[(.*)\]', s, re.DOTALL)
+        if not match:
+            return s
+        
+        content = match.group(1)
+        
+        content_no_quotes = re.sub(r"[\"']", '', content)
+        
+        fixed_items = content_no_quotes.replace(', ', '", "')
+        
+        if not ':' in s[:match.span()[0]]:
+            start = s[:match.span()[0]] + ':'
+        else: 
+            start = s[:match.span()[0]]
+        fixed_string = start + '["' + fixed_items.strip() + '"]' + s[match.span()[1]:]
+        return fixed_string
+
+    def _add_comma(self, line):
+        line = line.strip()
+        if line in ['{', '}']:
+            return line
+
+        if '[' in line or ']' in line:
+            line = self._fix_list_string(line)
+            
+        if not line.endswith(',') and line not in ['{', '}']:
+            line = line + ','
+        
+        return line
