@@ -1,0 +1,84 @@
+import os
+import torch
+from torch.utils.data import Dataset, DataLoader, random_split
+from torchvision import transforms
+from PIL import Image
+from transformers import AutoImageProcessor, AutoModel
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+import numpy as np
+
+class CustomImageDataset(Dataset):
+    def __init__(self, file_paths, labels, transform=None):
+        """
+        Args:
+            file_paths (list): List of file paths to images.
+            labels (list): List of labels corresponding to the images.
+            transform (callable, optional): Optional transform to be applied to the images.
+        """
+        self.file_paths = file_paths
+        self.labels = labels
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.file_paths)
+
+    def __getitem__(self, idx):
+        img_path = self.file_paths[idx]
+        label = self.labels[idx]
+        image = Image.open(img_path).convert("RGB")
+        if self.transform:
+            image = self.transform(image)
+        return image, label
+
+data_dir = "./data"
+file_paths = [os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith(".jpg")]
+labels = [0 if "cat" in f else 1 for f in file_paths]
+
+dataset = CustomImageDataset(file_paths=file_paths, labels=labels, transform=transform)
+dataloader = DataLoader(dataset, batch_size=64, shuffle=False)
+
+transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+])
+dataset = CustomImageDataset(file_paths=file_paths, labels=labels, transform=transform)
+
+train_size = int(0.8 * len(dataset))
+test_size = len(dataset) - train_size
+train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
+
+batch_size = 32
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=batch_size)
+
+model_name = "facebook/dinov2-base"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+processor = AutoImageProcessor.from_pretrained(model_name)
+model = AutoModel.from_pretrained(model_name).to(device)
+model.eval()
+
+def extract_features(dataloader):
+    features = []
+    labels = []
+    with torch.no_grad():
+        for batch in dataloader:
+            images, targets = batch
+            images = images.to(device)
+            outputs = model(images)
+            features.append(outputs.last_hidden_state.mean(dim=1).cpu().numpy())  # Pool features
+            labels.append(targets.numpy())
+    return np.concatenate(features), np.concatenate(labels)
+
+X_train, y_train = extract_features(train_loader)
+
+X_test, y_test = extract_features(test_loader)
+
+clf = LogisticRegression(max_iter=1000, verbose=1)
+clf.fit(X_train, y_train)
+
+y_pred = clf.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+print(f"Test Accuracy: {accuracy:.2f}")
