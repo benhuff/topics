@@ -35,9 +35,6 @@ data_dir = "./data"
 file_paths = [os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith(".jpg")]
 labels = [0 if "cat" in f else 1 for f in file_paths]
 
-dataset = CustomImageDataset(file_paths=file_paths, labels=labels, transform=transform)
-dataloader = DataLoader(dataset, batch_size=64, shuffle=False)
-
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
