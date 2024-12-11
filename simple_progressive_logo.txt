@@ -1,0 +1,154 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, balanced_accuracy_score
+from sklearn.model_selection import LeaveOneGroupOut
+from sklearn.datasets import fetch_openml
+
+print("Downloading MNIST (this may take a while)...")
+mnist = fetch_openml('mnist_784', version=1)
+
+# Convert to numpy arrays immediately
+X = mnist.data.to_numpy()
+y = mnist.target.to_numpy().astype(np.int64)
+
+# For runtime considerations, let's use a subset of MNIST (e.g., first 1,000 samples)
+N = 1000
+X = X[:N]
+y = y[:N]
+
+# Create groups by evenly splitting the dataset into 10 groups of 100 samples each
+num_groups = 10
+group_size = N // num_groups
+groups = np.repeat(np.arange(num_groups), group_size)
+
+# Create pretrained_y with exactly 94% accuracy
+accuracy_target = 0.94
+num_to_flip = int((1 - accuracy_target) * N)  # ~6% of N
+y_pretrained = y.copy()
+
+np.random.seed(42)
+flip_indices = np.random.choice(N, size=num_to_flip, replace=False)
+for idx in flip_indices:
+    correct_label = y_pretrained[idx]
+    possible_labels = [c for c in range(10) if c != correct_label]
+    new_label = np.random.choice(possible_labels)
+    y_pretrained[idx] = new_label
+
+# Check the pretrained accuracy
+pretrained_acc_check = accuracy_score(y, y_pretrained)
+print(f"Pretrained model accuracy check: {pretrained_acc_check*100:.2f}%")
+
+# Set fractions and number of repeats
+fractions = [0.2, 0.4, 0.6, 0.8, 1.0]
+n_repeats = 3
+
+logo = LeaveOneGroupOut()
+results = []
+
+for train_idx, test_idx in logo.split(X, y, groups=groups):
+    # Ensure indexing returns arrays, not Series/DataFrames
+    train_idx = np.array(train_idx)
+    test_idx = np.array(test_idx)
+
+    X_test, y_test = X[test_idx], y[test_idx]
+    y_pretrained_test = y_pretrained[test_idx]
+
+    X_full_train, y_full_train = X[train_idx], y[train_idx]
+
+    for frac in fractions:
+        run_accuracies = []
+        run_bal_accuracies = []
+        run_pretrained_accuracies = []
+        run_pretrained_bal_accuracies = []
+
+        for _ in range(n_repeats):
+            n_samples = int(frac * len(X_full_train))
+            sampled_indices = np.random.choice(len(X_full_train), n_samples, replace=False)
+            
+            # Ensure these are also arrays
+            X_train, y_train = X_full_train[sampled_indices], y_full_train[sampled_indices]
+            
+            # Check class diversity
+            if len(np.unique(y_train)) < 2:
+                continue
+
+            model = LogisticRegression(class_weight='balanced', max_iter=1000, solver='saga', C=0.1, random_state=None)
+            model.fit(X_train, y_train)
+
+            y_pred = model.predict(X_test)
+
+            acc = accuracy_score(y_test, y_pred)
+            bal_acc = balanced_accuracy_score(y_test, y_pred)
+
+            pretrained_acc = accuracy_score(y_test, y_pretrained_test)
+            pretrained_bal_acc = balanced_accuracy_score(y_test, y_pretrained_test)
+
+            run_accuracies.append(acc)
+            run_bal_accuracies.append(bal_acc)
+            run_pretrained_accuracies.append(pretrained_acc)
+            run_pretrained_bal_accuracies.append(pretrained_bal_acc)
+
+        if len(run_accuracies) > 0:
+            results.append({
+                'test_group': test_group,
+                'fraction': frac,
+                'mean_accuracy': np.mean(run_accuracies),
+                'std_accuracy': np.std(run_accuracies),
+                'mean_bal_accuracy': np.mean(run_bal_accuracies),
+                'std_bal_accuracy': np.std(run_bal_accuracies),
+                'mean_pretrained_accuracy': np.mean(run_pretrained_accuracies),
+                'std_pretrained_accuracy': np.std(run_pretrained_accuracies),
+                'mean_pretrained_bal_accuracy': np.mean(run_pretrained_bal_accuracies),
+                'std_pretrained_bal_accuracy': np.std(run_pretrained_bal_accuracies),
+                'n_repeats': len(run_accuracies)
+            })
+
+results_df = pd.DataFrame(results)
+
+# Aggregate results across groups by fraction
+aggregated = results_df.groupby('fraction').agg({
+    'mean_accuracy': ['mean','std'],
+    'mean_bal_accuracy': ['mean','std'],
+    'mean_pretrained_accuracy': ['mean','std'],
+    'mean_pretrained_bal_accuracy': ['mean','std']
+}).reset_index()
+
+# Flatten multi-level columns
+aggregated.columns = ['fraction', 
+                      'mean_acc', 'std_acc',
+                      'mean_bal_acc', 'std_bal_acc',
+                      'mean_p_acc', 'std_p_acc',
+                      'mean_p_bal_acc', 'std_p_bal_acc']
+
+print("\nAggregated Results (Averaged over all groups):")
+print(aggregated)
+
+# Plot Balanced Accuracy with shaded error regions
+plt.figure(figsize=(10, 6))
+
+# Plot model A's balanced accuracy
+plt.plot(aggregated['fraction'], aggregated['mean_bal_acc'], label='Your Model Balanced Accuracy', marker='o')
+plt.fill_between(
+    aggregated['fraction'],
+    aggregated['mean_bal_acc'] - aggregated['std_bal_acc'],
+    aggregated['mean_bal_acc'] + aggregated['std_bal_acc'],
+    alpha=0.2  # Adjust transparency as desired
+)
+
+# Plot model B's balanced accuracy
+plt.plot(aggregated['fraction'], aggregated['mean_p_bal_acc'], label='Pretrained Model Balanced Accuracy', marker='o')
+plt.fill_between(
+    aggregated['fraction'],
+    aggregated['mean_p_bal_acc'] - aggregated['std_p_bal_acc'],
+    aggregated['mean_p_bal_acc'] + aggregated['std_p_bal_acc'],
+    alpha=0.2
+)
+
+plt.xlabel("Training Data Fraction")
+plt.ylabel("Balanced Accuracy")
+plt.title("Balanced Accuracy Comparison with Shaded Error Regions (MNIST)")
+plt.legend()
+plt.grid(True)
+plt.show()
